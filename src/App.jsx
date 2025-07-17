@@ -170,6 +170,33 @@ const ChatAssistant = ({ submittedTicket }) => {
     const [chatState, setChatState] = useState('pre-chat'); // 'pre-chat', 'active'
     const [showCommands, setShowCommands] = useState(false);
 
+    const renderTextWithLinks = (text) => {
+        const regex = /(\[([^\]]+)\]\((https?:\/\/[^\s]+)\))|(https?:\/\/[^\s]+)/g;
+        const parts = text.split(regex);
+
+        return parts.filter(part => part).map((part, i) => {
+            const markdownMatch = part.match(/\[([^\]]+)\]\((https?:\/\/[^\s]+)\)/);
+            if (markdownMatch) {
+                const linkText = markdownMatch[1];
+                const url = markdownMatch[2];
+                return <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{linkText}</a>;
+            }
+
+            if (part.match(/^https?:\/\//)) {
+                let displayText = part;
+                try {
+                    const urlObj = new URL(part);
+                    displayText = urlObj.hostname.replace(/^www\./, '');
+                } catch (e) {
+                    displayText = part.length > 30 ? part.substring(0, 27) + '...' : part;
+                }
+                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{displayText}</a>;
+            }
+
+            return part;
+        });
+    };
+
     useEffect(() => {
         if (chatState === 'active' && messages.length === 0) {
             setMessages([{ role: 'assistant', isWelcome: true }]);
@@ -212,6 +239,28 @@ const ChatAssistant = ({ submittedTicket }) => {
         if (!command.trim()) return;
 
         const userInput = command;
+        
+        if (isDeveloperMode && expertResponse.trim()) {
+            addMessage({ role: 'user', text: userInput });
+            addMessage({ role: 'developer', text: expertResponse });
+            setIsLoading(true);
+            try {
+                await callAppsScript({
+                    action: 'saveTrainingData',
+                    userQuestion: userInput,
+                    expertAnswer: expertResponse
+                });
+                addMessage({ role: 'system', text: 'Training data saved successfully!' });
+            } catch (error) {
+                addMessage({ role: 'system', text: `Error saving training data: ${error.message}` });
+            } finally {
+                setInput('');
+                setExpertResponse('');
+                setIsLoading(false);
+            }
+            return;
+        }
+
         addMessage({ role: 'user', text: userInput });
         setInput('');
         setIsLoading(true);
@@ -243,6 +292,11 @@ const ChatAssistant = ({ submittedTicket }) => {
                                     `Net Quantity: ${item.net_quantity || '0'}`;
                 }
                 addMessage({ role: 'assistant', text: dataToDisplay });
+            } else if (userInput.toLowerCase() === '/help') {
+                addMessage({ 
+                    role: 'assistant', 
+                    text: `For detailed guides and resources, you can visit the [Logistics Resource Page](https://commons.lbl.gov/spaces/ALSU/pages/205818555/EZ+Office+Inventory+Management+and+Tracking). It's a great place to find information on inventory management and tracking.`
+                });
             } else {
                 const conversationHistory = messages.map(msg => `${msg.role}: ${msg.text}`).join('\n');
                 const ticketContext = currentTicket ? `\nCurrent Ticket Context: #${currentTicket.id}, Program: ${currentTicket.program}, Item: ${currentTicket.itemNumber}.` : 'No ticket has been submitted yet.';
@@ -289,7 +343,7 @@ const ChatAssistant = ({ submittedTicket }) => {
                                     {msg.isWelcome ? (
                                         <div>
                                             <p className="text-sm">
-                                                Hello! I am the Logistics AI Assistant. You can ask me general questions, or use commands to search the inventory.
+                                                Hello! I am the Logistics AI Assistant. You can ask me general questions or use commands for specific actions.
                                                 {!showCommands ? (
                                                     <button onClick={() => setShowCommands(true)} className="text-indigo-400 underline ml-1 font-semibold">
                                                         see commands
@@ -302,15 +356,14 @@ const ChatAssistant = ({ submittedTicket }) => {
                                             </p>
                                             {showCommands && (
                                                 <p className="text-sm whitespace-pre-wrap mt-2 font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                                                    `/ezoi &lt;asset|inventory&gt; &lt;number&gt;`
+                                                    {`/ezoi <asset|inventory> <number>\n/help`}
                                                 </p>
                                             )}
                                         </div>
                                     ) : (
-                                        <>
-                                            {msg.role === 'developer' && <p className="text-xs font-bold uppercase mb-1">Expert Response</p>}
-                                            <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                                        </>
+                                        <p className="text-sm whitespace-pre-wrap">
+                                            {renderTextWithLinks(msg.text)}
+                                        </p>
                                     )}
                             </div>
                             {msg.role === 'user' && <UserIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />}
