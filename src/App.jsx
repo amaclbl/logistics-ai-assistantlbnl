@@ -171,30 +171,35 @@ const ChatAssistant = ({ submittedTicket }) => {
     const [showCommands, setShowCommands] = useState(false);
 
     const renderTextWithLinks = (text) => {
-        const regex = /(\[([^\]]+)\]\((https?:\/\/[^\s]+)\))|(https?:\/\/[^\s]+)/g;
-        const parts = text.split(regex);
+        const regex = /\[([^\]]+)\]\((https?:\/\/[^\s]+)\)|(https?:\/\/[^\s]+)/g;
+        let lastIndex = 0;
+        const result = [];
+        let match;
 
-        return parts.filter(part => part).map((part, i) => {
-            const markdownMatch = part.match(/\[([^\]]+)\]\((https?:\/\/[^\s]+)\)/);
-            if (markdownMatch) {
-                const linkText = markdownMatch[1];
-                const url = markdownMatch[2];
-                return <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{linkText}</a>;
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                result.push(text.substring(lastIndex, match.index));
             }
-
-            if (part.match(/^https?:\/\//)) {
-                let displayText = part;
+            if (match[1] && match[2]) {
+                result.push(<a key={match.index} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{match[1]}</a>);
+            } else if (match[3]) {
+                let displayText = match[3];
                 try {
-                    const urlObj = new URL(part);
+                    const urlObj = new URL(match[3]);
                     displayText = urlObj.hostname.replace(/^www\./, '');
                 } catch (e) {
-                    displayText = part.length > 30 ? part.substring(0, 27) + '...' : part;
+                    displayText = match[3].length > 30 ? match[3].substring(0, 27) + '...' : match[3];
                 }
-                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{displayText}</a>;
+                result.push(<a key={match.index} href={match[3]} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">{displayText}</a>);
             }
+            lastIndex = regex.lastIndex;
+        }
 
-            return part;
-        });
+        if (lastIndex < text.length) {
+            result.push(text.substring(lastIndex));
+        }
+
+        return result.length > 0 ? result : [text];
     };
 
     useEffect(() => {
