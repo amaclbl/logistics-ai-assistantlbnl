@@ -169,7 +169,6 @@ const ChatAssistant = ({ submittedTicket }) => {
     const [showLog, setShowLog] = useState(false);
     const [chatState, setChatState] = useState('pre-chat'); // 'pre-chat', 'active'
     const [showCommands, setShowCommands] = useState(false);
-    const [pendingEzoiQuery, setPendingEzoiQuery] = useState(null);
 
     const renderTextWithLinks = (text) => {
         const regex = /\[([^\]]+)\]\((https?:\/\/[^\s]+)\)|(https?:\/\/[^\s]+)/g;
@@ -239,28 +238,6 @@ const ChatAssistant = ({ submittedTicket }) => {
         return result;
     };
 
-    const executeEzoiCommand = async (command) => {
-        const [, itemType, itemNumber] = command.split(' ');
-        addMessage({ role: 'system', text: `Searching EZOI for ${itemType} #${itemNumber}...` });
-        const result = await callAppsScript({ action: 'getEzoiData', itemType, itemNumber });
-        const item = result.item;
-        let dataToDisplay = `No matching ${itemType} found for #${itemNumber}.`;
-        if (item) {
-            const poNumberField = item.custom_fields.find(f => f.id === 35860);
-            const windchillNumberField = item.custom_fields.find(f => f.id === 35884);
-            dataToDisplay = `EZOI Data for ${itemType} #${itemNumber}:\n` +
-                            `Name: ${item.name || 'N/A'}\n` +
-                            `Description: ${item.description || 'N/A'}\n` +
-                            `Windchill #: ${windchillNumberField?.value || 'N/A'}\n` +
-                            `Model #: ${item.product_model_number || 'N/A'}\n` +
-                            `Vendor: ${item.vendor_name || 'N/A'}\n` +
-                            `Location: ${item.location_name || 'N/A'}\n` +
-                            `PO #: ${poNumberField?.value || 'N/A'}\n` +
-                            `Net Quantity: ${item.net_quantity || '0'}`;
-        }
-        addMessage({ role: 'assistant', text: dataToDisplay });
-    };
-
     const handleSendMessage = async (e, overrideCommand = null) => {
         if (e) e.preventDefault();
         const command = overrideCommand || input;
@@ -294,14 +271,32 @@ const ChatAssistant = ({ submittedTicket }) => {
         setIsLoading(true);
 
         try {
-            if (pendingEzoiQuery && (userInput.toLowerCase().includes('asset') || userInput.toLowerCase().includes('inventory'))) {
-                const itemType = userInput.toLowerCase().includes('asset') ? 'asset' : 'inventory';
-                const fullCommand = `/ezoi ${itemType} ${pendingEzoiQuery}`;
-                setPendingEzoiQuery(null);
-                await executeEzoiCommand(fullCommand);
-                addMessage({ role: 'assistant', text: `I have the data for item #${pendingEzoiQuery}. What would you like to know?` });
-            } else if (userInput.toLowerCase().startsWith('/ezoi')) {
-                await executeEzoiCommand(userInput);
+            if (userInput.toLowerCase().startsWith('/ezoi')) {
+                const [, itemType, itemNumber] = userInput.split(' ');
+                if (!itemType || !itemNumber || !['asset', 'inventory'].includes(itemType.toLowerCase())) {
+                    addMessage({ role: 'assistant', text: "Invalid command. Use format: `/ezoi <asset|inventory> <number>`" });
+                    setIsLoading(false);
+                    return;
+                }
+                addMessage({ role: 'system', text: `Searching EZOI for ${itemType} #${itemNumber}...` });
+                const result = await callAppsScript({ action: 'getEzoiData', itemType, itemNumber });
+                const item = result.item;
+                let dataToDisplay = `No matching ${itemType} found for #${itemNumber}.`;
+                if (item) {
+                    const poNumberField = item.custom_fields.find(f => f.id === 35860);
+                    const windchillNumberField = item.custom_fields.find(f => f.id === 35884);
+                    
+                    dataToDisplay = `EZOI Data for ${itemType} #${itemNumber}:\n` +
+                                    `Name: ${item.name || 'N/A'}\n` +
+                                    `Description: ${item.description || 'N/A'}\n` +
+                                    `Windchill #: ${windchillNumberField?.value || 'N/A'}\n` +
+                                    `Model #: ${item.product_model_number || 'N/A'}\n` +
+                                    `Vendor: ${item.vendor_name || 'N/A'}\n` +
+                                    `Location: ${item.location_name || 'N/A'}\n` +
+                                    `PO #: ${poNumberField?.value || 'N/A'}\n` +
+                                    `Net Quantity: ${item.net_quantity || '0'}`;
+                }
+                addMessage({ role: 'assistant', text: dataToDisplay });
             } else if (userInput.toLowerCase() === '/help') {
                 addMessage({ 
                     role: 'assistant', 
@@ -309,13 +304,12 @@ const ChatAssistant = ({ submittedTicket }) => {
                 });
             } else {
                 const result = await callAppsScript({ action: 'getAiResponse', prompt: userInput });
-                const assistantResponse = result.candidates[0].content.parts[0];
+                const assistantResponse = result.candidates?.[0]?.content?.parts?.[0];
 
-                if (assistantResponse.requiresClarification) {
+                if (assistantResponse && assistantResponse.text) {
                     addMessage({ role: 'assistant', text: assistantResponse.text });
-                    setPendingEzoiQuery(assistantResponse.itemNumber);
                 } else {
-                    addMessage({ role: 'assistant', text: assistantResponse.text || "I'm having trouble responding right now." });
+                    addMessage({ role: 'assistant', text: "I'm having trouble responding right now." });
                 }
             }
         } catch (error) {
