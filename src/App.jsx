@@ -7,6 +7,8 @@ const BotIcon = ({ className }) => ( <svg className={className} xmlns="http://ww
 const UserIcon = ({ className }) => ( <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path></svg> );
 const DeveloperIcon = ({ className }) => ( <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> );
 const Spinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
+const ExternalLinkIcon = ({ className }) => (<svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>);
+
 
 const LogViewer = ({ content, onClose }) => (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
@@ -103,7 +105,7 @@ const TicketForm = ({ setSubmittedTicket }) => {
         <>
             {modalContent && <Modal title={modalContent.title} content={modalContent.content} onClose={() => setModalContent(null)} />}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg w-full h-full flex flex-col">
-                <h2 className="text-lg font-bold mb-3 text-center text-gray-800 dark:text-white">Submit a Ticket</h2>
+                <h2 className="text-lg font-bold mb-3 text-center text-gray-800 dark:text-white flex-shrink-0">Submit a Ticket</h2>
                 <div className="overflow-y-auto flex-grow pr-2">
                     <form onSubmit={handleSubmit} className="space-y-2 text-sm max-w-sm mx-auto">
                         <div><label htmlFor="userName" className="block text-xs font-medium text-gray-600 dark:text-gray-300">Name</label><input type="text" id="userName" value={userName} onChange={(e) => setUserName(e.target.value)} required className="mt-1 block w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" /></div>
@@ -113,6 +115,25 @@ const TicketForm = ({ setSubmittedTicket }) => {
                         {(selectedProgram === 'Windchill' || (selectedProgram === 'EZOI' && ezoiItemType)) && (<div className="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-2"><div className="flex justify-between items-center"><p className="text-sm font-semibold text-gray-800 dark:text-white">Program: {selectedProgram} {ezoiItemType && `(${ezoiItemType})`}</p><button type="button" onClick={() => { setSelectedProgram(null); setEzoiItemType(null); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Change</button></div><div><label htmlFor="itemNumber" className="block text-xs font-medium text-gray-600 dark:text-gray-300">{selectedProgram} {ezoiItemType && `${ezoiItemType} `}# (Mandatory)</label><input type="text" id="itemNumber" value={itemNumber} onChange={handleItemNumberChange} required placeholder={selectedProgram === 'EZOI' ? 'e.g., 1234' : 'e.g., HW-0000-0000'} className="mt-1 block w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" /></div><div><label htmlFor="errorTitle" className="block text-xs font-medium text-gray-600 dark:text-gray-300">Error Title / Summary (Optional)</label><input type="text" id="errorTitle" value={errorTitle} onChange={(e) => setErrorTitle(e.target.value)} className="mt-1 block w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" /></div><div><label htmlFor="errorDescription" className="block text-xs font-medium text-gray-600 dark:text-gray-300">Error Description (Optional)</label><textarea id="errorDescription" value={errorDescription} onChange={(e) => setErrorDescription(e.target.value)} rows="3" className="mt-1 block w-full px-2 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea></div><button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed">{isSubmitting ? <Spinner /> : 'Submit Ticket'}</button></div>)}
                         {submissionResult && (<div className="mt-3 p-2 bg-green-100 dark:bg-green-900/50 border border-green-300 dark:border-green-700 rounded-lg text-center"><p className="font-semibold text-green-800 dark:text-green-200 text-xs">Success!</p><p className="text-xs text-green-700 dark:text-green-300">Ticket <span className="font-mono">{submissionResult.id}</span> has been submitted.</p></div>)}
                     </form>
+                </div>
+                <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                    <h3 className="text-sm font-semibold text-center text-gray-700 dark:text-gray-300 mb-2">Helpful Resources</h3>
+                    <div className="space-y-2 text-xs">
+                        <a href="https://commons.lbl.gov/spaces/ALSU/pages/205818555/EZ+Office+Inventory+Management+and+Tracking" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <ExternalLinkIcon className="w-4 h-4 mr-2 text-indigo-500" />
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-white">ALS-U Logistics Page</p>
+                                <p className="text-gray-500 dark:text-gray-400">Official documentation and guides.</p>
+                            </div>
+                        </a>
+                        <a href="https://ezo.io/ezofficeinventory/knowledge-base/" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <ExternalLinkIcon className="w-4 h-4 mr-2 text-indigo-500" />
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-white">EZOI Knowledge Base</p>
+                                <p className="text-gray-500 dark:text-gray-400">General help and tutorials for EZOfficeInventory.</p>
+                            </div>
+                        </a>
+                    </div>
                 </div>
             </div>
         </>
